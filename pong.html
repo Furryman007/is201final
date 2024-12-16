@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        .navbar {
+            width: 100%;
+            background-color: #222;
+            padding: 10px 0;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar .nav-item a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            transition: background-color 0.3s;
+        }
+
+        .navbar .nav-item a:hover {
+            background-color: #444;
+            border-radius: 5px;
+        }
+
+        .navbar-toggler {
+            background-color: white;
+            border: none;
+            font-size: 16px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .navbar-toggler i {
+            margin-left: 5px;
+        }
+
+        .collapse {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .collapse ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        .collapse ul li {
+            margin-left: 15px;
+        }
+
+        body {
+            padding-top: 70px; /* Adjust for fixed navbar */
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 2px solid white;
+        }
+
+        .controls, .scores {
+            padding: 10px;
+            border: 2px solid white;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .scores {
+            font-size: 20px;
+        }
+
+        .buttons {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #444;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation-->
+    <nav class="navbar navbar-expand-lg navbar-light" id="mainNav">
+        <div class="container px-4 px-lg-5">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav ms-auto py-4 py-lg-0">
+                    <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="scratch.html">Bucket List</a></li>
+                    <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="pong.html">Pong Game</a></li>
+                    <!-- <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="contact.html">Contact</a></li> -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="controls">
+        <p><strong>Controls:</strong></p>
+        <p>Player 1: W (Up), S (Down)</p>
+    </div>
+    <div class="buttons">
+        <button id="startPauseBtn">Pause</button>
+    </div>
+    <canvas id="pong" width="600" height="300"></canvas>
+    <div class="scores">
+        <p>Player 1 Score: <span id="score1">0</span></p>
+        <p>Computer Score: <span id="score2">0</span></p>
+    </div>
+    <script>
+        const canvas = document.getElementById('pong');
+        const context = canvas.getContext('2d');
+
+        // Game variables
+        const paddleWidth = 10, paddleHeight = 60;
+        const ballRadius = 8;
+        let leftPaddleY = (canvas.height - paddleHeight) / 2;
+        let rightPaddleY = (canvas.height - paddleHeight) / 2;
+        let ballX = canvas.width / 2, ballY = canvas.height / 2;
+        let ballSpeedX = 4, ballSpeedY = 3;
+        let leftScore = 0, rightScore = 0;
+        let isGamePaused = false;
+
+        // Paddle movement flags
+        let leftUpPressed = false, leftDownPressed = false;
+
+        // Draw paddles
+        function drawPaddle(x, y) {
+            context.fillStyle = 'white';
+            context.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        // Draw ball
+        function drawBall() {
+            context.beginPath();
+            context.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            context.fillStyle = 'white';
+            context.fill();
+            context.closePath();
+        }
+
+        // Draw center line
+        function drawCenterLine() {
+            context.setLineDash([10, 10]);
+            context.strokeStyle = 'white';
+            context.beginPath();
+            context.moveTo(canvas.width / 2, 0);
+            context.lineTo(canvas.width / 2, canvas.height);
+            context.stroke();
+        }
+
+        // Move paddles
+        function movePaddles() {
+            const paddleSpeed = 5;
+            if (leftUpPressed && leftPaddleY > 0) leftPaddleY -= paddleSpeed;
+            if (leftDownPressed && leftPaddleY < canvas.height - paddleHeight) leftPaddleY += paddleSpeed;
+        }
+
+        // Computer AI for right paddle
+        function moveComputerPaddle() {
+            const paddleCenter = rightPaddleY + paddleHeight / 2;
+            if (ballY < paddleCenter - 10) {
+                rightPaddleY -= 4; // Adjust speed if necessary
+            } else if (ballY > paddleCenter + 10) {
+                rightPaddleY += 4; // Adjust speed if necessary
+            }
+            // Ensure paddle stays within bounds
+            rightPaddleY = Math.max(0, Math.min(canvas.height - paddleHeight, rightPaddleY));
+        }
+
+        // Move ball
+        function moveBall() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Bounce off top and bottom walls
+            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Bounce off paddles
+            if (
+                ballX - ballRadius < paddleWidth && 
+                ballY > leftPaddleY && 
+                ballY < leftPaddleY + paddleHeight
+            ) {
+                ballSpeedX = -ballSpeedX;
+            }
+
+            if (
+                ballX + ballRadius > canvas.width - paddleWidth &&
+                ballY > rightPaddleY &&
+                ballY < rightPaddleY + paddleHeight
+            ) {
+                ballSpeedX = -ballSpeedX;
+            }
+
+            // Update score and reset ball if out of bounds
+            if (ballX + ballRadius < 0) {
+                rightScore++;
+                updateScores();
+                resetBall();
+            }
+
+            if (ballX - ballRadius > canvas.width) {
+                leftScore++;
+                updateScores();
+                resetBall();
+            }
+        }
+
+        // Reset ball position
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballSpeedX = -ballSpeedX;
+        }
+
+        // Update scores on screen
+        function updateScores() {
+            document.getElementById('score1').textContent = leftScore;
+            document.getElementById('score2').textContent = rightScore;
+        }
+
+        // Event listeners for paddle controls
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'w') leftUpPressed = true;
+            if (event.key === 's') leftDownPressed = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'w') leftUpPressed = false;
+            if (event.key === 's') leftDownPressed = false;
+        });
+
+        // Pause/Start button functionality
+        document.getElementById('startPauseBtn').addEventListener('click', () => {
+            isGamePaused = !isGamePaused;
+            document.getElementById('startPauseBtn').textContent = isGamePaused ? 'Start' : 'Pause';
+        });
+
+        // Game loop
+        function gameLoop() {
+            if (!isGamePaused) {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                drawBall();
+                drawPaddle(0, leftPaddleY);
+                drawPaddle(canvas.width - paddleWidth, rightPaddleY);
+                drawCenterLine();
+                moveBall();
+                movePaddles();
+                moveComputerPaddle();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
+
